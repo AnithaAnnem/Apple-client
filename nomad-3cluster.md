@@ -11,6 +11,7 @@ The PoC implements a **3-Node Combined Cluster Topology**. Each instance pulls d
 * **The 3-Node Resilience Rule:** Nomad utilizes the Raft consensus protocol. By distributing server roles across all 3 nodes (`bootstrap_expect = 3`), the cluster achieves high-availability quorum. It can comfortably tolerate the complete loss of any single node without interrupting application delivery.
 
 ---
+```mermaid
 graph TD
     %% Define Styles
     classDef sgStyle fill:#f9f9f9,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5;
@@ -34,7 +35,7 @@ graph TD
     Node1 <==> |Serf Gossip<br/>Ports 4647/4648| Node2
     Node2 <==> |Serf Gossip<br/>Ports 4647/4648| Node3
     Node1 <.-> |Mesh Gossip.| Node3
-
+```
 
 ##  2. AWS Infrastructure & Network Prerequisites
 
