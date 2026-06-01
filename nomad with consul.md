@@ -15,23 +15,28 @@ This project demonstrates:
 # Architecture
 
 ```mermaid
-+-----------------------------------------------------+
-| Node-1 (172.31.4.101)                              |
-| Nomad Server + Client                              |
-| Consul Server                                      |
-+-----------------------------------------------------+
+flowchart TB
 
-+-----------------------------------------------------+
-| Node-2 (172.31.5.251)                              |
-| Nomad Server + Client                              |
-| Consul Server                                      |
-+-----------------------------------------------------+
+    subgraph Cluster["Nomad + Consul Cluster"]
 
-+-----------------------------------------------------+
-| Node-3 (172.31.10.174)                             |
-| Nomad Server + Client                              |
-| Consul Server                                      |
-+-----------------------------------------------------+
+        N1["Node-1<br/>172.31.4.101<br/>Nomad Server + Client<br/>Consul Server"]
+
+        N2["Node-2<br/>172.31.5.251<br/>Nomad Server + Client<br/>Consul Server"]
+
+        N3["Node-3<br/>172.31.10.174<br/>Nomad Server + Client<br/>Consul Server"]
+
+        NGINX["Nginx Container<br/>Nomad Job: my-job1"]
+    end
+
+    N1 <-->|Raft| N2
+    N2 <-->|Raft| N3
+    N3 <-->|Raft| N1
+
+    N3 --> NGINX
+
+    NGINX -->|Service Registration| N1
+    NGINX -->|Service Registration| N2
+    NGINX -->|Service Registration| N3
 ```
 
 ---
