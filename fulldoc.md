@@ -18,11 +18,13 @@ flowchart LR
 
     Nginx -->|HTTP 80| HAProxy[HAProxy]
 
-    HAProxy -->|Discover Services| Consul[Consul]
+    CT[Consul Template] -->|Generate haproxy.cfg<br/>Reload HAProxy| HAProxy
 
-    HAProxy -->|Route Traffic| Nomad1[Nomad Client 1]
-    HAProxy -->|Route Traffic| Nomad2[Nomad Client 2]
-    HAProxy -->|Route Traffic| Nomad3[Nomad Client 3]
+    Consul[Consul Service Discovery] -->|Service Catalog| CT
+
+    Nomad[Nomad Cluster] --> Nomad1[Nomad Client 1]
+    Nomad[Nomad Cluster] --> Nomad2[Nomad Client 2]
+    Nomad[Nomad Cluster] --> Nomad3[Nomad Client 3]
 
     Nomad1 --> Docker1[Docker Container]
     Nomad2 --> Docker2[Docker Container]
@@ -31,8 +33,9 @@ flowchart LR
     Docker1 --> App[Hello Kubernetes App]
     Docker2 --> App
     Docker3 --> App
-```
 
+    App -->|Register Service| Consul
+```
 ---
 
 # Infrastructure Details
