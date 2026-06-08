@@ -8,19 +8,30 @@ The objective is to deploy a containerized application on a Nomad cluster, regis
 
 ---
 
-# Architecture
+# Detailed Architecture
 
 ```mermaid
 flowchart TD
 
-    A[Internet] --> B[HTTPS Port 443]
-    B --> C[Nginx Reverse Proxy]
-    C --> D[SSL Termination]
-    D --> E[HAProxy Load Balancer]
-    E --> F[Consul Service Discovery]
-    F --> G[Nomad Cluster]
-    G --> H[Docker Containers]
-    H --> I[Sample Application]
+    User[User Browser] -->|HTTPS 443| Nginx[Nginx Reverse Proxy]
+
+    Nginx -->|HTTP| HAProxy[HAProxy Load Balancer]
+
+    HAProxy -->|Service Lookup| Consul[Consul Service Discovery]
+
+    Consul -->|Registered Services| Nomad[Nomad Cluster]
+
+    Nomad --> Node1[Nomad Client 1]
+    Nomad --> Node2[Nomad Client 2]
+    Nomad --> Node3[Nomad Client 3]
+
+    Node1 --> Docker1[Docker Container]
+    Node2 --> Docker2[Docker Container]
+    Node3 --> Docker3[Docker Container]
+
+    Docker1 --> App[Hello Kubernetes Application]
+    Docker2 --> App
+    Docker3 --> App
 ```
 ---
 
