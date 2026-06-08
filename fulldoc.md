@@ -7,32 +7,32 @@ This project demonstrates a complete application deployment stack using HashiCor
 The objective is to deploy a containerized application on a Nomad cluster, register services in Consul, dynamically route traffic through HAProxy, and securely expose the application through Nginx using SSL/TLS.
 
 ---
-
-# Detailed Architecture
+# End-to-End Traffic Flow
 
 ```mermaid
-flowchart TD
+flowchart LR
 
-    User[User Browser] -->|HTTPS 443| Nginx[Nginx Reverse Proxy]
+    Browser[Browser]
 
-    Nginx -->|HTTP| HAProxy[HAProxy Load Balancer]
+    Browser -->|HTTPS 443| Nginx[Nginx Server<br/>SSL Termination]
 
-    HAProxy -->|Service Lookup| Consul[Consul Service Discovery]
+    Nginx -->|HTTP 80| HAProxy[HAProxy]
 
-    Consul -->|Registered Services| Nomad[Nomad Cluster]
+    HAProxy -->|Discover Services| Consul[Consul]
 
-    Nomad --> Node1[Nomad Client 1]
-    Nomad --> Node2[Nomad Client 2]
-    Nomad --> Node3[Nomad Client 3]
+    HAProxy -->|Route Traffic| Nomad1[Nomad Client 1]
+    HAProxy -->|Route Traffic| Nomad2[Nomad Client 2]
+    HAProxy -->|Route Traffic| Nomad3[Nomad Client 3]
 
-    Node1 --> Docker1[Docker Container]
-    Node2 --> Docker2[Docker Container]
-    Node3 --> Docker3[Docker Container]
+    Nomad1 --> Docker1[Docker Container]
+    Nomad2 --> Docker2[Docker Container]
+    Nomad3 --> Docker3[Docker Container]
 
-    Docker1 --> App[Hello Kubernetes Application]
+    Docker1 --> App[Hello Kubernetes App]
     Docker2 --> App
     Docker3 --> App
 ```
+
 ---
 
 # Infrastructure Details
