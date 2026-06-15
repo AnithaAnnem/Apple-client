@@ -11,10 +11,13 @@ pipeline {
     }
 
     stages {
-        stage('Initialize Deployment Configuration') {
+        stage('Initialize & Validate Template') {
             steps {
                 echo "Deploying target image tag: ${params.IMAGE_TAG}"
                 echo "Tracking automation via Jenkins Build Run: ${env.BUILD_NUMBER}"
+                
+                // Pre-flight check: Ensure the template file exists before running sed
+                sh "test -f ${env.TEMPLATE_DIR}/webapp.nomad.tpl || (echo 'ERROR: Source template missing!'; exit 1)"
             }
         }
 
@@ -22,16 +25,12 @@ pipeline {
             steps {
                 echo "Replacing production placeholders with runtime token keys..."
                 
-                // We wrap this stage inside credentials to safely pull the Artifactory Token alongside the Nomad variables
-                withCredentials([
-                    string(credentialsId: 'nomad-acl-token', variable: 'NOMAD_TOKEN'),
-                    string(credentialsId: 'artifactory-token', variable: 'ART_TOKEN')
-                ]) {
-                    // Multi-expression sed command to swap DEPLOY_VERSION, RIO_BUILD_NUMBER, and ARTIFACTORY_TOKEN_VALUE
+                withCredentials([string(credentialsId: 'nomad-acl-token', variable: 'NOMAD_TOKEN')]) {
+                    // Replaces placeholders and leaves static blocks (update, migrate, restart) intact
                     sh """
                         sed -e 's/DEPLOY_VERSION/${params.IMAGE_TAG}/g' \
                             -e 's/RIO_BUILD_NUMBER/${env.BUILD_NUMBER}/g' \
-                            -e 's/ARTIFACTORY_TOKEN_VALUE/${ART_TOKEN}/g' \
+                            -e 's/ARTIFACTORY_TOKEN_VALUE/NOT_REQUIRED/g' \
                             ${env.TEMPLATE_DIR}/webapp.nomad.tpl > webapp.nomad
                     """
                 }
@@ -41,19 +40,25 @@ pipeline {
         stage('Secure Deploy to Nomad') {
             steps {
                 withCredentials([string(credentialsId: 'nomad-acl-token', variable: 'NOMAD_TOKEN')]) {
-                    echo "Authenticating via ACL token and submitting deployment payload..."
-                    // This now deploys using the newly generated file with all production settings
+                    echo "Submitting deployment payload..."
+                    
+                    // Validate job syntax locally before pushing to the cluster api
+                    sh "nomad job validate webapp.nomad"
+                    
+                    // Run the job execution plan
                     sh "nomad job run webapp.nomad"
                 }
             }
         }
 
-        stage('Verify Rollout Status') {
+        stage('Verify Rollout & Migration Status') {
             steps {
                 withCredentials([string(credentialsId: 'nomad-acl-token', variable: 'NOMAD_TOKEN')]) {
-                    echo "Fetching secure corporate job allocation statuses..."
-                    // Note: Changed target string from 'demo-webapp' to match his job identifier name 'v1-job-name'
-                    sh "nomad job status v1-job-name"
+                    echo "Monitoring update progress against healthy_deadline policies..."
+                    
+                    // Tracks the rolling deployment live. If the update stalls or violates 
+                    // progress_deadline (25m) or healthy_deadline (20m), Jenkins will catch the failure.
+                    sh "nomad job status -monitor v1-job-name"
                 }
             }
         }
