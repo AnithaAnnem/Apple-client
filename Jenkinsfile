@@ -7,7 +7,7 @@ pipeline {
     }
 
     parameters {
-        string(name: 'IMAGE_TAG', defaultValue: '0.1', description: 'Target Docker Image Tag to deploy')
+        string(name: 'IMAGE_TAG', defaultValue: '1.10.0', description: 'Target Docker Image Tag to deploy')
     }
 
     stages {
@@ -26,9 +26,9 @@ pipeline {
                 echo "Replacing production placeholders with runtime token keys..."
                 
                 withCredentials([string(credentialsId: 'nomad-acl-token', variable: 'NOMAD_TOKEN')]) {
-                    // Replaces placeholders and leaves static blocks (update, migrate, restart) intact
+                    // Replaces PLACEHOLDER_IMAGE_TAG, RIO_BUILD_NUMBER, and handles ARTIFACTORY_TOKEN_VALUE
                     sh """
-                        sed -e 's/DEPLOY_VERSION/${params.IMAGE_TAG}/g' \
+                        sed -e 's/PLACEHOLDER_IMAGE_TAG/${params.IMAGE_TAG}/g' \
                             -e 's/RIO_BUILD_NUMBER/${env.BUILD_NUMBER}/g' \
                             -e 's/ARTIFACTORY_TOKEN_VALUE/NOT_REQUIRED/g' \
                             ${env.TEMPLATE_DIR}/webapp.nomad.tpl > webapp.nomad
@@ -56,9 +56,8 @@ pipeline {
                 withCredentials([string(credentialsId: 'nomad-acl-token', variable: 'NOMAD_TOKEN')]) {
                     echo "Monitoring update progress against healthy_deadline policies..."
                     
-                    // Tracks the rolling deployment live. If the update stalls or violates 
-                    // progress_deadline (25m) or healthy_deadline (20m), Jenkins will catch the failure.
-                    sh "nomad job status -monitor v1-job-name"
+                    // Monitors the rollout live and forces Jenkins to wait for container health checks
+                    sh "nomad job status -monitor demo-webapp"
                 }
             }
         }
