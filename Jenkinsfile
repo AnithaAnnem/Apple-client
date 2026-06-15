@@ -54,10 +54,14 @@ pipeline {
         stage('Verify Rollout & Migration Status') {
             steps {
                 withCredentials([string(credentialsId: 'nomad-acl-token', variable: 'NOMAD_TOKEN')]) {
-                    echo "Monitoring update progress against healthy_deadline policies..."
+                    echo "Extracting latest deployment ID and monitoring rollout progress..."
                     
-                    // FIXED: Changed 'job status -monitor' to 'deployment status -monitor -latest'
-                    sh "nomad deployment status -monitor -latest demo-webapp"
+                    // Automatically finds the latest deployment ID for demo-webapp and tracks it live
+                    sh """
+                        LATEST_DEPLOY_ID=\$(nomad job deployments demo-webapp | grep -v "ID" | head -n 1 | awk '{print \$1}')
+                        echo "Monitoring active Deployment ID: \$LATEST_DEPLOY_ID"
+                        nomad deployment status -monitor \$LATEST_DEPLOY_ID
+                    """
                 }
             }
         }
