@@ -1,0 +1,31 @@
+pipeline {
+    agent any
+    environment {
+        NOMAD_ADDR = "http://127.0.0.1:4646"
+        TEMPLATE_DIR = "/opt/nomad-templates"
+    }
+    parameters {
+        string(name: 'IMAGE_TAG', defaultValue: '1.9.0', description: 'Target Tag for App 2')
+    }
+    stages {
+        stage('Deploy App 2') {
+            steps {
+                withCredentials([string(credentialsId: 'nomad-acl-token', variable: 'NOMAD_TOKEN')]) {
+                    sh """
+                        sed -e 's/PLACEHOLDER_IMAGE_TAG/${params.IMAGE_TAG}/g' \
+                            ${env.TEMPLATE_DIR}/webapp2.nomad.tpl > webapp2.nomad
+                        nomad job validate webapp2.nomad
+                        nomad job run webapp2.nomad
+                    """
+                }
+            }
+        }
+        stage('Verify Rollout') {
+            steps {
+                withCredentials([string(credentialsId: 'nomad-acl-token', variable: 'NOMAD_TOKEN')]) {
+                    sh "nomad deployment status -monitor -latest demo-webapp-2"
+                }
+            }
+        }
+    }
+}
