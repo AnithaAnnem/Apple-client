@@ -1,33 +1,51 @@
 pipeline {
     agent any
+
     environment {
         NOMAD_ADDR = "http://127.0.0.1:4646"
         TEMPLATE_DIR = "/opt/nomad-templates"
     }
+
     parameters {
-        string(name: 'IMAGE_TAG', defaultValue: '1.10.0', description: 'Target Tag for App 1')
+        string(
+            name: 'IMAGE_TAG',
+            defaultValue: '1.10.0',
+            description: 'Target Tag for App 1'
+        )
     }
+
     stages {
         stage('Deploy App 1') {
             steps {
-                withCredentials([string(credentialsId: 'nomad-acl-token', variable: 'NOMAD_TOKEN')]) {
+                withCredentials([
+                    string(credentialsId: 'nomad-acl-token', variable: 'NOMAD_TOKEN')
+                ]) {
                     sh """
-                        sed -e 's/PLACEHOLDER_IMAGE_TAG/${params.IMAGE_TAG}/g' \
-                            ${env.TEMPLATE_DIR}/webapp.nomad.tpl > webapp1.nomad
+                        sed -e 's/PLACEHOLDER_IMAGE_TAG/${IMAGE_TAG}/g' \
+                        ${TEMPLATE_DIR}/webapp.nomad.tpl > webapp1.nomad
+
                         nomad job validate webapp1.nomad
                         nomad job run webapp1.nomad
                     """
                 }
             }
         }
+
         stage('Verify Rollout') {
             steps {
-                withCredentials([string(credentialsId: 'nomad-acl-token', variable: 'NOMAD_TOKEN')]) {
-                    sh """
-                        LATEST_DEPLOY_ID=\$(nomad job deployments demo-webapp | grep -v "ID" | head -n 1 | awk '{print \$1}')
-                        echo "Monitoring active Deployment ID: \$LATEST_DEPLOY_ID"
-                        nomad deployment status -monitor \$LATEST_DEPLOY_ID
-                    """
+                withCredentials([
+                    string(credentialsId: 'nomad-acl-token', variable: 'NOMAD_TOKEN')
+                ]) {
+                    sh '''
+                        LATEST_DEPLOY_ID=$(nomad job deployments demo-webapp \
+                            | awk 'NR>1 {print $1; exit}')
+
+                        echo "Monitoring active Deployment ID: $LATEST_DEPLOY_ID"
+
+                        nomad deployment status -monitor "$LATEST_DEPLOY_ID"
+                    '''
                 }
             }
         }
+    }
+}
