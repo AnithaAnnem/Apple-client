@@ -23,9 +23,11 @@ pipeline {
         stage('Verify Rollout') {
             steps {
                 withCredentials([string(credentialsId: 'nomad-acl-token', variable: 'NOMAD_TOKEN')]) {
-                    sh "nomad deployment status -monitor -latest demo-webapp"
+                    sh """
+                        LATEST_DEPLOY_ID=\$(nomad job deployments demo-webapp | grep -v "ID" | head -n 1 | awk '{print \$1}')
+                        echo "Monitoring active Deployment ID: \$LATEST_DEPLOY_ID"
+                        nomad deployment status -monitor \$LATEST_DEPLOY_ID
+                    """
                 }
             }
         }
-    }
-}
