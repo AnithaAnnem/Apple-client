@@ -56,8 +56,8 @@ pipeline {
                 withCredentials([string(credentialsId: 'nomad-acl-token', variable: 'NOMAD_TOKEN')]) {
                     echo "Monitoring update progress against healthy_deadline policies..."
                     
-                    // Monitors the rollout live and forces Jenkins to wait for container health checks
-                    sh "nomad job status -monitor demo-webapp"
+                    // FIXED: Changed 'job status -monitor' to 'deployment status -monitor -latest'
+                    sh "nomad deployment status -monitor -latest demo-webapp"
                 }
             }
         }
