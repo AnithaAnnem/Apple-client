@@ -5,7 +5,7 @@ pipeline {
         TEMPLATE_DIR = "/opt/nomad-templates"
     }
     parameters {
-        string(name: 'IMAGE_TAG', defaultValue: '1.9.0', description: 'Target Tag for App 2')
+        string(name: 'IMAGE_TAG', defaultValue: '1.7.0', description: 'Target Tag for App 2')
     }
     stages {
         stage('Deploy App 2') {
