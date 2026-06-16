@@ -1,31 +1,49 @@
 pipeline {
     agent any
+
     environment {
         NOMAD_ADDR = "http://127.0.0.1:4646"
         TEMPLATE_DIR = "/opt/nomad-templates"
     }
+
     parameters {
-        string(name: 'IMAGE_TAG', defaultValue: '1.10.1', description: 'Target Tag for App 2')
+        string(
+            name: 'IMAGE_TAG', 
+            defaultValue: '1.10.1', 
+            description: 'Target Tag for App 2'
+        )
     }
+
     stages {
         stage('Deploy App 2') {
             steps {
-                withCredentials([string(credentialsId: 'nomad-acl-token', variable: 'NOMAD_TOKEN')]) {
+                withCredentials([
+                    string(credentialsId: 'nomad-acl-token', variable: 'NOMAD_TOKEN')
+                ]) {
                     sh """
+                        # Dynamically inject the chosen parameter tag into the HCL template
                         sed -e 's/PLACEHOLDER_IMAGE_TAG/${params.IMAGE_TAG}/g' \
-                            ${env.TEMPLATE_DIR}/webapp2.nomad.tpl > webapp2.nomad
+                        ${env.TEMPLATE_DIR}/webapp2.nomad.tpl > webapp2.nomad
+
                         nomad job validate webapp2.nomad
                         nomad job run webapp2.nomad
                     """
                 }
             }
         }
+
         stage('Verify Rollout') {
             steps {
-                withCredentials([string(credentialsId: 'nomad-acl-token', variable: 'NOMAD_TOKEN')]) {
+                withCredentials([
+                    string(credentialsId: 'nomad-acl-token', variable: 'NOMAD_TOKEN')
+                ]) {
                     sh """
-                        LATEST_DEPLOY_ID=\$(nomad job deployments demo-webapp-2 | grep -v "ID" | head -n 1 | awk '{print \$1}')
+                        # Fixed target name string to match job 'demo-webapp2' perfectly
+                        LATEST_DEPLOY_ID=\$(nomad job deployments demo-webapp2 | grep -v "ID" | head -n 1 | awk '{print \$1}')
+                        
                         echo "Monitoring active Deployment ID: \$LATEST_DEPLOY_ID"
+                        
+                        # Keep the stage alive and block until Nomad health checks pass
                         nomad deployment status -monitor \$LATEST_DEPLOY_ID
                     """
                 }
