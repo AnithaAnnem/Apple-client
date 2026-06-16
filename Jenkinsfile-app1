@@ -21,8 +21,9 @@ pipeline {
                     string(credentialsId: 'nomad-acl-token', variable: 'NOMAD_TOKEN')
                 ]) {
                     sh """
-                        sed -e 's/PLACEHOLDER_IMAGE_TAG/${IMAGE_TAG}/g' \
-                        ${TEMPLATE_DIR}/webapp.nomad.tpl > webapp1.nomad
+                        # Dynamically inject the chosen parameter tag into the HCL template
+                        sed -e 's/PLACEHOLDER_IMAGE_TAG/${params.IMAGE_TAG}/g' \
+                        ${env.TEMPLATE_DIR}/webapp.nomad.tpl > webapp1.nomad
 
                         nomad job validate webapp1.nomad
                         nomad job run webapp1.nomad
@@ -37,11 +38,12 @@ pipeline {
                     string(credentialsId: 'nomad-acl-token', variable: 'NOMAD_TOKEN')
                 ]) {
                     sh '''
-                        LATEST_DEPLOY_ID=$(nomad job deployments demo-webapp \
-                            | awk 'NR>1 {print $1; exit}')
+                        # Isolate the newest active deployment ID string for tracking
+                        LATEST_DEPLOY_ID=$(nomad job deployments demo-webapp | grep -v "ID" | head -n 1 | awk '{print $1}')
 
                         echo "Monitoring active Deployment ID: $LATEST_DEPLOY_ID"
 
+                        # Keep the stage alive and block until Nomad health checks pass
                         nomad deployment status -monitor "$LATEST_DEPLOY_ID"
                     '''
                 }
